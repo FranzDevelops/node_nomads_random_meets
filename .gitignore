@@ -7,7 +7,7 @@ __pycache__/
 *.pyd
 
 # Virtual environment
-venv/
+venv/*
 env/
 
 # Compiled Python files
