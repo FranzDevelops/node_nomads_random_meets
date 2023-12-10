@@ -43,7 +43,7 @@ def set_user_to_event(user_pair: UserPair, event_id: int):
     return response
     
 
-def set_event(user_pair: UserPair, meet_url: str, meet_id: str) -> EventSchema:
+def set_event(user_pair: UserPair, meet_url: str, meet_id: str) -> int:
     user_one_id = user_pair.user_one
     user_two_id = user_pair.user_two
     user_one_name = get_user_data(user_one_id, "name")
@@ -57,7 +57,7 @@ def set_event(user_pair: UserPair, meet_url: str, meet_id: str) -> EventSchema:
     new_event = {
         "name": "One on One",
         "description": f'One on One meet for {user_one_name} and {user_two_name}',
-        "date": datetime.strptime(date, '%Y-%m-%d'),
+        "date": date,
         "organizer": "Node Nomads",
         "notification_minutes": 15,
         "call_url": meet_url,
@@ -70,14 +70,13 @@ def set_event(user_pair: UserPair, meet_url: str, meet_id: str) -> EventSchema:
     }
 
     schema = EventSchema(**new_event)
-    obj = schema.model_dump_json()
+    obj = dict(schema)
+
+    print(obj)
 
     data, count = supabase.table('events').insert(obj).execute()
-    
-    # if count[1] == None:
-    #     raise Exception("Insert operation failed")
 
-    return obj
+    return data[1][0]['id']
 
 def get_user_data(user_id: str, data: str):
     res = supabase.table('users').select(data).eq('id', user_id).execute()
@@ -105,4 +104,4 @@ def generate_timestamp(timezone):
         "date": date_string
     }
 
-print(set_user_to_event(UserPair(user_one='81f31cfa-4a5c-4363-9cf3-4abeab83612a', user_two='770e565d-421b-4354-9d21-f4e4ce1af725'), 1))
+print(set_event(UserPair(user_one='81f31cfa-4a5c-4363-9cf3-4abeab83612a', user_two='770e565d-421b-4354-9d21-f4e4ce1af725'), '1', '1'))

@@ -5,7 +5,7 @@ from typing import Optional
 class EventSchema(BaseModel):
     name: Optional[str]
     description: Optional[str]
-    date: Optional[datetime]
+    date: Optional[str]
     organizer: Optional[str]
     notification_minutes: Optional[int]
     call_url: Optional[str]
