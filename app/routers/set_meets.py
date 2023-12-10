@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Response, status, HTTPException, Depends, APIRouter
 from config.supabase import supabase
+from app.events_for_pairs import create_pairs_events
 
 router = APIRouter(
     prefix="/setmeets",
@@ -8,8 +9,10 @@ router = APIRouter(
 
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
-def create_pairmeets():
+def create_pair_meets():
 
-    response = supabase.table('users_pair_meets').select("*").execute()
+    create_pairs_events()
  
-    return response
+    return {
+        "status": "success"
+    }

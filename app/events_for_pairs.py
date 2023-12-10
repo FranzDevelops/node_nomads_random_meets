@@ -1,4 +1,4 @@
-from pair_users import pair_users
+from .pair_users import pair_users
 from app.schemas.user import UserId, UserPair
 from app.schemas.event import EventSchema, UserToEvent
 from datetime import datetime, timedelta
@@ -6,9 +6,12 @@ from config.supabase import supabase
 from pydantic import Json
 import pytz
 
-def create_pairs_events(meet_url: str):
+def create_pairs_events():
     users_pairs = pair_users()
-    print(users_pairs)
+
+    for user_pair in users_pairs:
+        meet_url, meet_id = 'here comes the the zoom func', 'xd'
+        set_event(user_pair, meet_url,meet_id)
 
 
 def set_user_to_event(user_pair: UserPair, event_id: int):
@@ -37,13 +40,10 @@ def set_user_to_event(user_pair: UserPair, event_id: int):
     users_to_event.append(obj_one)
     users_to_event.append(obj_two)
 
-    print(users_to_event)
-    response = supabase.table('user_events').upsert(users_to_event).execute()
-
-    return response
+    supabase.table('user_events').upsert(users_to_event).execute()
     
 
-def set_event(user_pair: UserPair, meet_url: str, meet_id: str) -> int:
+def set_event(user_pair: UserPair, meet_url: str, meet_id: str) -> bool:
     user_one_id = user_pair.user_one
     user_two_id = user_pair.user_two
     user_one_name = get_user_data(user_one_id, "name")
@@ -76,7 +76,11 @@ def set_event(user_pair: UserPair, meet_url: str, meet_id: str) -> int:
 
     data, count = supabase.table('events').insert(obj).execute()
 
-    return data[1][0]['id']
+    event_id = data[1][0]['id']
+
+    set_user_to_event(user_pair, event_id) 
+
+    return True
 
 def get_user_data(user_id: str, data: str):
     res = supabase.table('users').select(data).eq('id', user_id).execute()
@@ -103,5 +107,3 @@ def generate_timestamp(timezone):
         "end_time": end_time_string,
         "date": date_string
     }
-
-print(set_event(UserPair(user_one='81f31cfa-4a5c-4363-9cf3-4abeab83612a', user_two='770e565d-421b-4354-9d21-f4e4ce1af725'), '1', '1'))
