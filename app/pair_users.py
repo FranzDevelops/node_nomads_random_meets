@@ -2,6 +2,8 @@ import sys
 sys.path.append("/home/neo/Documents/Projects/nodenomads_random_meets_api")
 
 import random
+import math
+from random import shuffle, sample
 from config.supabase import supabase
 from app.schemas.user import UserId, UserPair
 from typing import List, Union
@@ -26,32 +28,33 @@ def get_paired_users() -> List[UserPair]:
     user_pairs = [UserPair(user_one=pair["user_one"], user_two=pair["user_two"]) for pair in result]
     return user_pairs
 
+
 def get_unpaired_users(available_users: List[UserId], paired_users: List[UserPair]) -> List[UserPair]:
     new_pairs = []
 
     # Generate all possible combinations of pairs
     user_combinations = list(combinations(available_users, 2))
 
-    # Keep track of users already paired
-    paired_user_ids = set(pair.user_one for pair in paired_users) | set(pair.user_two for pair in paired_users)
+    # Create pairs without checking for existence
+    all_pairs = [
+        UserPair(user_one=user_id_1.id, user_two=user_id_2.id)
+        for user_id_1, user_id_2 in user_combinations
+    ]
 
-    for user_id_1, user_id_2 in user_combinations:
-        # Check if either user is already paired
-        if user_id_1.id in paired_user_ids or user_id_2.id in paired_user_ids:
-            continue
-
-        # Create a new pair
-        new_pairs.append(UserPair(user_one=user_id_1.id, user_two=user_id_2.id))
-        paired_user_ids.add(user_id_1.id)
-        paired_user_ids.add(user_id_2.id)
+    # Filter out existing pairs
+    existing_pairs = set((pair.user_one, pair.user_two) for pair in paired_users)
+    new_pairs = [pair for pair in all_pairs if (pair.user_one, pair.user_two) not in existing_pairs]
 
     # If the total number of users is odd, one user will have two new pairs
     if len(available_users) % 2 == 1:
         user_with_two_pairs = available_users[-1]  # Pick the last user in the list
-        if user_with_two_pairs.id not in paired_user_ids:
-            new_pairs.append(UserPair(user_one=user_with_two_pairs.id, user_two=available_users[0].id))
+        new_pairs.append(UserPair(user_one=user_with_two_pairs.id, user_two=available_users[0].id))
 
-    return new_pairs
+    # Determine the number of pairs to generate
+    num_pairs_to_generate = math.ceil(len(available_users) / 2)
+
+    # Randomly sample the desired number of new pairs
+    return sample(new_pairs, num_pairs_to_generate)
 
 def delete_all_pair_meets():
     # Delete all records from 'users_pair_meets' table
@@ -61,10 +64,9 @@ def create_new_pair_meets(pairs: List[UserPair]):
     # Convert UserPair instances and tuples to dictionaries
     records = [dict(pair) for pair in pairs]
 
-    print(records)
     supabase.table('users_pair_meets').upsert(records).execute()
 
-def pair_users():
+def pair_users() -> List[UserPair]:
     available_users = get_available_users()
     paired_users = get_paired_users()
 
@@ -79,5 +81,4 @@ def pair_users():
         # diff = 0 if len(unpaired_users) % 2 == 0 else 1
         # new_pairs = [(unpaired_users[i], unpaired_users[i + 1]) for i in range(0, len(unpaired_users) - diff, 2)]
         create_new_pair_meets(unpaired_users)
-
-pair_users()
+        return unpaired_users;

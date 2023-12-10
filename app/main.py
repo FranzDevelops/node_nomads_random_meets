@@ -26,4 +26,4 @@ app.include_router(set_meets.router)
 
 @app.get("/")
 def read_root():
-    return {"Hello": "World"}
+    return {"Hello": "MTF"}
