@@ -45,16 +45,32 @@ def get_unpaired_users(available_users: List[UserId], paired_users: List[UserPai
     existing_pairs = set((pair.user_one, pair.user_two) for pair in paired_users)
     new_pairs = [pair for pair in all_pairs if (pair.user_one, pair.user_two) not in existing_pairs]
 
+    # Determine the number of pairs to generate
+    num_pairs_to_generate = (len(available_users) + 1) // 2
+
+    # Randomly sample the desired number of new pairs
+    selected_pairs = sample(new_pairs, num_pairs_to_generate)
+
+    # Keep track of paired users in this function call
+    paired_users_set = set()
+    result_pairs = []
+
+    # Ensure each user is paired only once in this function call
+    for pair in selected_pairs:
+        if pair.user_one not in paired_users_set and pair.user_two not in paired_users_set:
+            result_pairs.append(pair)
+            paired_users_set.add(pair.user_one)
+            paired_users_set.add(pair.user_two)
+
     # If the total number of users is odd, one user will have two new pairs
     if len(available_users) % 2 == 1:
         user_with_two_pairs = available_users[-1]  # Pick the last user in the list
-        new_pairs.append(UserPair(user_one=user_with_two_pairs.id, user_two=available_users[0].id))
+        remaining_users = [user for user in available_users if user != user_with_two_pairs]
+        user_for_second_pair = sample(remaining_users, 1)[0]
+        additional_pair = UserPair(user_one=user_with_two_pairs.id, user_two=user_for_second_pair.id)
+        result_pairs.append(additional_pair)
 
-    # Determine the number of pairs to generate
-    num_pairs_to_generate = math.ceil(len(available_users) / 2)
-
-    # Randomly sample the desired number of new pairs
-    return sample(new_pairs, num_pairs_to_generate)
+    return result_pairs
 
 def delete_all_pair_meets():
     # Delete all records from 'users_pair_meets' table

@@ -56,7 +56,7 @@ def set_event(user_pair: UserPair) -> bool:
     end_time = time_dict["end_time"]
     date = time_dict["date"]
 
-    meet_url, meet_id = create_zoom_meet(user_one_email, user_two_email, start_time, one_timezone)
+    meet_url, meet_id = create_zoom_meet(user_one_name, user_name_two, user_one_email, user_two_email, start_time, one_timezone)
 
     new_event = {
         "name": f'{user_one_name} and {user_two_name} meet',
@@ -64,8 +64,8 @@ def set_event(user_pair: UserPair) -> bool:
         "date": date,
         "organizer": "Node Nomads",
         "notification_minutes": 15,
-        "call_url": meet_url,
-        "call_id": meet_id,
+        "call_url": f'{meet_url}',
+        "call_id": f'{meet_id}',
         "is_active": True,
         "timezone": one_timezone,
         "start_time": start_time,

@@ -39,18 +39,24 @@ def generate_access_token():
     expires_in = token_data["expires_in"]
     access_token = token_data["access_token"]
 
-    data, count = supabase.table('zoom_token').update({"jwt_token": access_token, "expires_in": expires_in}).eq("id", 1).execute()
+    current_time = datetime.utcnow().replace(tzinfo=timezone.utc)
+    expiration_time = current_time + timedelta(seconds=expires_in)
+
+    # Convert expiration_time to a string in a specific format
+    expiration_time_str = expiration_time.strftime('%Y-%m-%d %H:%M:%S %Z')
+
+    data, count = supabase.table('zoom_token').update({"jwt_token": access_token, "expiration_time": expiration_time_str}).eq("id", 1).execute()
 
     return access_token
 
 
 def get_access_token():
-    data, count = supabase.table('zoom_token').select("jwt_token", "expires_in").eq('id', 1).execute()
+    data, count = supabase.table('zoom_token').select("jwt_token", "expiration_time").eq('id', 1).execute()
     token = data[1][0]["jwt_token"]
-    expires_in = data[1][0]["expires_in"]
+    expiration_time_str = data[1][0]["expiration_time"]
+    expiration_time = datetime.strptime(expiration_time_str, '%Y-%m-%dT%H:%M:%S').replace(tzinfo=timezone.utc)
     try:
         current_time = datetime.utcnow().replace(tzinfo=timezone.utc)
-        expiration_time = current_time + timedelta(seconds=expires_in)
         if current_time > expiration_time:
             token = generate_access_token()
             return token
