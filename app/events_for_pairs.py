@@ -1,6 +1,7 @@
 from .pair_users import pair_users
 from app.schemas.user import UserId, UserPair
 from app.schemas.event import EventSchema, UserToEvent
+from app.zoom_meet import create_zoom_meet
 from datetime import datetime, timedelta
 from config.supabase import supabase
 from pydantic import Json
@@ -10,8 +11,7 @@ def create_pairs_events():
     users_pairs = pair_users()
 
     for user_pair in users_pairs:
-        meet_url, meet_id = 'here comes the the zoom func', 'xd'
-        set_event(user_pair, meet_url,meet_id)
+        set_event(user_pair)
 
 
 def set_user_to_event(user_pair: UserPair, event_id: int):
@@ -43,19 +43,23 @@ def set_user_to_event(user_pair: UserPair, event_id: int):
     supabase.table('user_events').upsert(users_to_event).execute()
     
 
-def set_event(user_pair: UserPair, meet_url: str, meet_id: str) -> bool:
+def set_event(user_pair: UserPair) -> bool:
     user_one_id = user_pair.user_one
     user_two_id = user_pair.user_two
     user_one_name = get_user_data(user_one_id, "name")
     user_two_name = get_user_data(user_two_id, "name")
+    user_one_email = get_user_data(user_one_id, "email")
+    user_two_email = get_user_data(user_two_id, "email")
     one_timezone = get_user_data(user_one_id, "timezone")
     time_dict = generate_timestamp(one_timezone)
     start_time = time_dict["start_time"]
     end_time = time_dict["end_time"]
     date = time_dict["date"]
 
+    meet_url, meet_id = create_zoom_meet(user_one_email, user_two_email, start_time, one_timezone)
+
     new_event = {
-        "name": "One on One",
+        "name": f'{user_one_name} and {user_two_name} meet',
         "description": f'One on One meet for {user_one_name} and {user_two_name}',
         "date": date,
         "organizer": "Node Nomads",
