@@ -74,14 +74,14 @@ async def get_unpaired_users_deprecated(available_users: List[UserId], paired_us
 
     return result_pairs
 
-async def get_unpaired_users(available_users: List[UserId], paired_users: List[UserPair]) -> List[UserPair]:
+async def get_unpaired_users(available_users: List[UserId]) -> List[UserPair]:
     # Check if the total number of users is odd
     is_odd_total_users = len(available_users) % 2 == 1
 
     # Shuffle the list of available users to ensure randomness
     shuffled_users = sample(available_users, len(available_users))
 
-    # Initialize lists to track paired users and generated pairs
+    # Initialize a set to track paired users and a list for generated pairs
     paired_users_set = set()
     generated_pairs = []
 
@@ -100,17 +100,16 @@ async def get_unpaired_users(available_users: List[UserId], paired_users: List[U
 
     # If the total number of users is odd, one user will have two new pairs
     if is_odd_total_users:
-        user_with_two_pairs = shuffled_users[-1]  # Pick the last user in the shuffled list
-        remaining_users = [user for user in shuffled_users if user != user_with_two_pairs]
+        user_with_two_pairs = shuffled_users[-1].id  # Pick the last user in the shuffled list
 
         # Ensure the second pair is with a different user
-        user_for_second_pair = sample([user for user in remaining_users if user != user_with_two_pairs], 1)[0]
+        user_for_second_pair = sample([user.id for user in available_users if user.id != user_with_two_pairs], 1)[0]
 
-        additional_pair = UserPair(user_one=user_with_two_pairs.id, user_two=user_for_second_pair.id)
+        additional_pair = UserPair(user_one=user_with_two_pairs, user_two=user_for_second_pair)
         generated_pairs.append(additional_pair)
 
-        paired_users_set.add(user_with_two_pairs.id)
-        paired_users_set.add(user_for_second_pair.id)
+        paired_users_set.add(user_with_two_pairs)
+        paired_users_set.add(user_for_second_pair)
 
     return generated_pairs
 
