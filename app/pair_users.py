@@ -1,6 +1,4 @@
 import sys
-sys.path.append("/home/neo/Documents/Projects/nodenomads_random_meets_api")
-
 import random
 import math
 from random import shuffle, sample
@@ -9,27 +7,28 @@ from app.schemas.user import UserId, UserPair
 from typing import List, Union
 from pydantic import Json
 from itertools import combinations
+import aiohttp
+import asyncio
 
-def get_available_users() -> List[UserId]:
+async def get_available_users() -> List[UserId]:
     # Fetch all users from 'users' table
-    res = supabase.table('users').select("id").execute()
+    res = await supabase.table('users').select("id").execute()
     obj = res.model_dump()
     result = obj["data"]
     # Create a list of UserId instances
     user_ids = [UserId(id=user["id"]) for user in result]
     return user_ids
 
-def get_paired_users() -> List[UserPair]:
+async def get_paired_users() -> List[UserPair]:
     # Fetch all pairs from 'users_pair_meets' table
-    res = supabase.table('users_pair_meets').select("user_one", "user_two").execute()
+    res = await supabase.table('users_pair_meets').select("user_one", "user_two").execute()
     obj = res.model_dump()
     result = obj["data"]
     # Create a list of UserPair instances
     user_pairs = [UserPair(user_one=pair["user_one"], user_two=pair["user_two"]) for pair in result]
     return user_pairs
 
-
-def get_unpaired_users(available_users: List[UserId], paired_users: List[UserPair]) -> List[UserPair]:
+async def get_unpaired_users(available_users: List[UserId], paired_users: List[UserPair]) -> List[UserPair]:
     new_pairs = []
 
     # Generate all possible combinations of pairs
@@ -72,29 +71,33 @@ def get_unpaired_users(available_users: List[UserId], paired_users: List[UserPai
 
     return result_pairs
 
-def delete_all_pair_meets():
+async def delete_all_pair_meets():
     # Delete all records from 'users_pair_meets' table
-    supabase.table('users_pair_meets').delete().execute()
+    await supabase.table('users_pair_meets').delete().execute()
 
-def create_new_pair_meets(pairs: List[UserPair]):
+async def create_new_pair_meets(pairs: List[UserPair]):
     # Convert UserPair instances and tuples to dictionaries
     records = [dict(pair) for pair in pairs]
 
-    supabase.table('users_pair_meets').upsert(records).execute()
+    await supabase.table('users_pair_meets').upsert(records).execute()
 
-def pair_users() -> List[UserPair]:
-    available_users = get_available_users()
-    paired_users = get_paired_users()
+async def pair_users() -> List[UserPair]:
+    available_users = await get_available_users()
+    paired_users = await get_paired_users()
 
-    unpaired_users = get_unpaired_users(available_users, paired_users)
+    unpaired_users = await get_unpaired_users(available_users, paired_users)
 
     if not unpaired_users:
         # All users are already paired, delete all pairs and try again
-        delete_all_pair_meets()
-        pair_users()
+        await delete_all_pair_meets()
+        await pair_users()
     else:
         # Create new pairs and insert into 'users_pair_meets' table
-        # diff = 0 if len(unpaired_users) % 2 == 0 else 1
-        # new_pairs = [(unpaired_users[i], unpaired_users[i + 1]) for i in range(0, len(unpaired_users) - diff, 2)]
-        create_new_pair_meets(unpaired_users)
-        return unpaired_users;
+        await create_new_pair_meets(unpaired_users)
+        return unpaired_users
+
+async def main():
+    await pair_users()
+
+if __name__ == "__main__":
+    asyncio.run(main())

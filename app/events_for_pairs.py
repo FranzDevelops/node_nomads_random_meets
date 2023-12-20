@@ -6,15 +6,15 @@ from datetime import datetime, timedelta
 from config.supabase import supabase
 from pydantic import Json
 import pytz
+import aiohttp
+import asyncio
 
-def create_pairs_events():
+async def create_pairs_events():
     users_pairs = pair_users()
 
-    for user_pair in users_pairs:
-        set_event(user_pair)
+    await asyncio.gather(*(set_event(user_pair) for user_pair in users_pairs))
 
-
-def set_user_to_event(user_pair: UserPair, event_id: int):
+async def set_user_to_event(user_pair: UserPair, event_id: int):
     user_one_id = user_pair.user_one
     user_two_id = user_pair.user_two
     users_to_event = []
@@ -40,23 +40,22 @@ def set_user_to_event(user_pair: UserPair, event_id: int):
     users_to_event.append(obj_one)
     users_to_event.append(obj_two)
 
-    supabase.table('user_events').upsert(users_to_event).execute()
-    
+    await supabase.table('user_events').upsert(users_to_event).execute()
 
-def set_event(user_pair: UserPair) -> bool:
+async def set_event(user_pair: UserPair) -> bool:
     user_one_id = user_pair.user_one
     user_two_id = user_pair.user_two
-    user_one_name = get_user_data(user_one_id, "name")
-    user_two_name = get_user_data(user_two_id, "name")
-    user_one_email = get_user_data(user_one_id, "email")
-    user_two_email = get_user_data(user_two_id, "email")
-    one_timezone = get_user_data(user_one_id, "timezone")
+    user_one_name = await get_user_data(user_one_id, "name")
+    user_two_name = await get_user_data(user_two_id, "name")
+    user_one_email = await get_user_data(user_one_id, "email")
+    user_two_email = await get_user_data(user_two_id, "email")
+    one_timezone = await get_user_data(user_one_id, "timezone")
     time_dict = generate_timestamp(one_timezone)
     start_time = time_dict["start_time"]
     end_time = time_dict["end_time"]
     date = time_dict["date"]
 
-    meet_url, meet_id = create_zoom_meet(user_one_name, user_two_name, user_one_email, user_two_email, start_time, one_timezone)
+    meet_url, meet_id = await create_zoom_meet(user_one_name, user_two_name, user_one_email, user_two_email, start_time, one_timezone)
 
     new_event = {
         "name": f'{user_one_name} and {user_two_name} meet',
@@ -78,16 +77,16 @@ def set_event(user_pair: UserPair) -> bool:
 
     print(obj)
 
-    data, count = supabase.table('events').insert(obj).execute()
+    data, count = await supabase.table('events').insert(obj).execute()
 
     event_id = data[1][0]['id']
 
-    set_user_to_event(user_pair, event_id) 
+    await set_user_to_event(user_pair, event_id)
 
     return True
 
-def get_user_data(user_id: str, data: str):
-    res = supabase.table('users').select(data).eq('id', user_id).execute()
+async def get_user_data(user_id: str, data: str):
+    res = await supabase.table('users').select(data).eq('id', user_id).execute()
     obj = res.model_dump()
     result = obj["data"][0][data]
     return result
@@ -111,3 +110,9 @@ def generate_timestamp(timezone):
         "end_time": end_time_string,
         "date": date_string
     }
+
+async def main():
+    await create_pairs_events()
+
+if __name__ == "__main__":
+    asyncio.run(main())

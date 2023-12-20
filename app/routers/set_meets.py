@@ -9,9 +9,9 @@ router = APIRouter(
 
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
-def create_pair_meets():
+async def create_pair_meets():
 
-    create_pairs_events()
+    await create_pairs_events()
  
     return {
         "status": "success"

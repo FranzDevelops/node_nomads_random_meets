@@ -1,11 +1,12 @@
-import requests
 import json
 from app.utils.zoom_token import get_access_token
 from app.schemas.zoom_meeting import ZoomMeeting
 from app.schemas.user import UserPair
 from datetime import datetime, timezone
+import aiohttp
+import asyncio
 
-def create_zoom_meet(user_name_one: str, user_name_two: str, email_one: str, email_two: str, start_time: str, timezone: str):
+async def create_zoom_meet(user_name_one: str, user_name_two: str, email_one: str, email_two: str, start_time: str, timezone: str):
 
     host_email = "cg@singularagency.co"
     
@@ -76,7 +77,7 @@ def create_zoom_meet(user_name_one: str, user_name_two: str, email_one: str, ema
 
     obj = ZoomMeeting(**data_payload)
     data = obj.model_dump_json()
-    access_token = get_access_token()
+    access_token = await get_access_token()
     headers = {"authorization": f"Bearer {access_token}"}
 
     try:
@@ -85,32 +86,34 @@ def create_zoom_meet(user_name_one: str, user_name_two: str, email_one: str, ema
         print(f"Error converting data to JSON: {e}")
         return None
 
-    response = requests.post(
-        url,
-        json=data_payload,
-        headers=headers
-    )
- 
-    try:
-        response_data = response.json()
-        meet_url = response_data.get("join_url")
-        meet_id = response_data.get("id")
-        print("Meet URL:", meet_url)
-        print("Meet ID:", meet_id)
-    except json.JSONDecodeError as e:
-        print(f"Error decoding response JSON: {e}")
-        return None
+    async with aiohttp.ClientSession() as session:
+        async with session.post(
+            url,
+            json=data_payload,
+            headers=headers
+        ) as response:
+            try:
+                response_data = await response.json()
+                meet_url = response_data.get("join_url")
+                meet_id = response_data.get("id")
+                print("Meet URL:", meet_url)
+                print("Meet ID:", meet_id)
+            except json.JSONDecodeError as e:
+                print(f"Error decoding response JSON: {e}")
+                return None
 
-    response.raise_for_status()
-    
+            response.raise_for_status()
+
     return (meet_url, meet_id)
 
-
-if __name__ == "__main__":
+async def main():
     timestamp = datetime(2023, 12, 31, 0, 0, tzinfo=timezone.utc)
     date = timestamp.strftime('%Y-%m-%d %H:%M:%S %Z')
 
     try:
-        create_zoom_meet("test1@gmail.com", "test2@gmail.com", date, "America/Guatemala")
-    except requests.exceptions.HTTPError as e:
+        await create_zoom_meet("test1@gmail.com", "test2@gmail.com", date, "America/Guatemala")
+    except aiohttp.ClientError as e:
         print(f"Error: {e}")
+
+if __name__ == "__main__":
+    asyncio.run(main())
