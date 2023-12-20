@@ -46,7 +46,7 @@ def get_unpaired_users(available_users: List[UserId], paired_users: List[UserPai
     new_pairs = [pair for pair in all_pairs if (pair.user_one, pair.user_two) not in existing_pairs]
 
     # Determine the number of pairs to generate
-    num_pairs_to_generate = (len(available_users) + 1) // 2
+    num_pairs_to_generate = len(available_users) // 2
 
     # Randomly sample the desired number of new pairs
     selected_pairs = sample(new_pairs, num_pairs_to_generate)
