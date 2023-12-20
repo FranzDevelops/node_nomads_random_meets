@@ -28,7 +28,7 @@ async def get_paired_users() -> List[UserPair]:
     user_pairs = [UserPair(user_one=pair["user_one"], user_two=pair["user_two"]) for pair in result]
     return user_pairs
 
-async def get_unpaired_users(available_users: List[UserId], paired_users: List[UserPair]) -> List[UserPair]:
+async def get_unpaired_users_deprecated(available_users: List[UserId], paired_users: List[UserPair]) -> List[UserPair]:
     new_pairs = []
 
     # Generate all possible combinations of pairs
@@ -45,7 +45,7 @@ async def get_unpaired_users(available_users: List[UserId], paired_users: List[U
     new_pairs = [pair for pair in all_pairs if (pair.user_one, pair.user_two) not in existing_pairs]
 
     # Determine the number of pairs to generate
-    num_pairs_to_generate = len(available_users) // 2
+    num_pairs_to_generate = (len(available_users) + 1) // 2
 
     # Randomly sample the desired number of new pairs
     selected_pairs = sample(new_pairs, num_pairs_to_generate)
@@ -56,9 +56,12 @@ async def get_unpaired_users(available_users: List[UserId], paired_users: List[U
 
     # Ensure each user is paired only once in this function call
     for pair in selected_pairs:
-        if pair.user_one not in paired_users_set and pair.user_two not in paired_users_set:
+        if pair.user_one not in paired_users_set:
             result_pairs.append(pair)
             paired_users_set.add(pair.user_one)
+
+        if pair.user_two not in paired_users_set:
+            result_pairs.append(pair)
             paired_users_set.add(pair.user_two)
 
     # If the total number of users is odd, one user will have two new pairs
@@ -70,6 +73,47 @@ async def get_unpaired_users(available_users: List[UserId], paired_users: List[U
         result_pairs.append(additional_pair)
 
     return result_pairs
+
+async def get_unpaired_users(available_users: List[UserId], paired_users: List[UserPair]) -> List[UserPair]:
+    # Check if the total number of users is odd
+    is_odd_total_users = len(available_users) % 2 == 1
+
+    # Shuffle the list of available users to ensure randomness
+    shuffled_users = sample(available_users, len(available_users))
+
+    # Initialize lists to track paired users and generated pairs
+    paired_users_set = set()
+    generated_pairs = []
+
+    # Generate pairs without checking for existence
+    for i in range(0, len(shuffled_users), 2):
+        user_id_1 = shuffled_users[i]
+        user_id_2 = shuffled_users[i + 1] if i + 1 < len(shuffled_users) else None
+
+        pair = UserPair(user_one=user_id_1.id, user_two=user_id_2.id if user_id_2 else None)
+
+        generated_pairs.append(pair)
+
+        paired_users_set.add(user_id_1.id)
+        if user_id_2:
+            paired_users_set.add(user_id_2.id)
+
+    # If the total number of users is odd, one user will have two new pairs
+    if is_odd_total_users:
+        user_with_two_pairs = shuffled_users[-1]  # Pick the last user in the shuffled list
+        remaining_users = [user for user in shuffled_users if user != user_with_two_pairs]
+
+        # Ensure the second pair is with a different user
+        user_for_second_pair = sample([user for user in remaining_users if user != user_with_two_pairs], 1)[0]
+
+        additional_pair = UserPair(user_one=user_with_two_pairs.id, user_two=user_for_second_pair.id)
+        generated_pairs.append(additional_pair)
+
+        paired_users_set.add(user_with_two_pairs.id)
+        paired_users_set.add(user_for_second_pair.id)
+
+    return generated_pairs
+
 
 async def delete_all_pair_meets():
     # Delete all records from 'users_pair_meets' table
